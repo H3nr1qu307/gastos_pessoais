@@ -17,16 +17,30 @@ export default async function categoriasRoutes(fastify: FastifyInstance) {
     const { usuarioId } = request.params;
     const { nome, descricao } = request.body;
 
-    // Validando os dados com Zod e incluindo o usuarioId
-    const data = CategoriaSchema.parse({
-      nome,
-      descricao,
-      usuarioId: Number(usuarioId),
-    });
+    const nomeformatado = nome.charAt(0).toUpperCase() + nome.slice(1).toLocaleLowerCase()
 
-    const categoria = await prisma.categoria.create({ data });
+    try {
+      const isCategoria = await prisma.categoria.findFirst({
+        where: { nome: nomeformatado }
+      })
 
-    return categoria;
+      if(isCategoria){
+        return reply.status(400).send({erro: 'Categoria já existente'})
+      }
+
+      const data = CategoriaSchema.parse({
+        nome: nomeformatado,
+        descricao,
+        usuarioId: Number(usuarioId),
+      })
+
+      const categoria = await prisma.categoria.create({ data });
+
+      return categoria;
+
+    } catch (err) {
+      return reply.status(500).send({ err: 'Erro ao criar categoria' })
+    }
   });
 
   fastify.get('/usuarios/:usuarioId/categorias', async (request, reply) => {
